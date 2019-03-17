@@ -1,0 +1,4 @@
+name = "TensorTrainFEM"
+uuid = "cb89bf22-489d-11e9-08a2-cb80975f297a"
+authors = ["Markus Bachmayr <bachmayr@uni-mainz.de>"]
+version = "0.1.0"
