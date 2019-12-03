@@ -1,6 +1,6 @@
 module TensorTrainFEM
 
-using TensorTrains
+using TensorTrains, LinearAlgebra
 
 export ttsin, ttcos,
     ttrhsdn, ttlaplacedd, ttlaplacedn, ttmassdn,
@@ -21,6 +21,8 @@ end  # module Multiscale
 module MultiscaleAMEn
 include("MultiscaleAMEn.jl")
 end # module MultiscaleAMEn
+
+eye(n::Integer) = Matrix{Float64}(I, n, n)
 
 # grid values of sine function
 function ttsin(L::Int64, ω::Float64, s::Float64 = 0.0)::Tensor
@@ -46,9 +48,9 @@ ttcos(L::Int64, ω::Float64, s::Float64 = 0.0)::Tensor = ttsin(L, ω, s + (.5*π
 # constant right-hand side
 # (homogeneous Dirichlet-Neumann boundary conditions, with L^2 scaling)
 function ttrhsdn(L::Int64)::Tensor
-  f = ttones(L); d = TT.ttdelta(L, [2 for i = 1:L]);
+  f = ttones(L); d = ttdelta(L, [2 for i = 1:L]);
   add!(f, -0.5, d);
-  scale!(f, 1./2.0^(L/2.))
+  scale!(f, 1. / 2.0^(L/2.))
 end
 
 # 1D Dirichlet-Dirichlet Laplacian
@@ -115,17 +117,17 @@ function ttmassdn(L::Int64)::TensorMatrix
     T[i][3,:,:,3] = [ 0. 0.; 1. 0.]
     T[i][4,:,:,4] = [ 0. 0.; 0. 1.]
   end
-  T[L][1,:,:,1] = [ 2./3. 1./6.; 1./6. 2./3.]
-  T[L][2,:,:,1] = [ 0. 1./6.; 0. 0.]
-  T[L][3,:,:,1] = [ 0. 0.; 1./6. 0.]
-  T[L][4,:,:,1] = [ 0. 0.; 0. -1./3.]
+  T[L][1,:,:,1] = [ 2.0/3.0  1.0/6.0; 1.0/6.0 2.0/3.0]
+  T[L][2,:,:,1] = [ 0. 1.0/6.; 0. 0.]
+  T[L][3,:,:,1] = [ 0. 0.; 1.0/6. 0.]
+  T[L][4,:,:,1] = [ 0. 0.; 0. -1.0/3.]
   return T
 end
 
 function ttBPXdnC(L::Int64, D::Int64)::TensorMatrix
 	c = 2.0.^(-collect(0:L))
 
-	I = eye(2,2)
+	I = eye(2)
 	J = [0 1; 0 0]
 	I1 = [1 0; 0 0]
 	I2 = [0 0; 0 1]
@@ -149,9 +151,9 @@ function ttBPXdnC(L::Int64, D::Int64)::TensorMatrix
 		UD = kron(U, UD)
 		WD = kron(W, WD)
 	end
-	sz = repmat([2, 4], 2*D, 1)
+	sz = repeat([2, 4], 2*D, 1)
 	prm = collect(1:D)
-	prm = [2*prm; 2*prm-1; 2*D+2*prm-1; 2*D+2*prm]
+	prm = [2*prm; 2*prm .- 1; 2*D .+ 2*prm .- 1; 2*D .+ 2*prm]
 	UD = reshape(UD, sz...)
 	UD = permutedims(UD, prm)
 	UD = reshape(UD, 4^D, 2^D, 2^D, 4^D)
@@ -168,14 +170,14 @@ function ttBPXdnC(L::Int64, D::Int64)::TensorMatrix
 	for l ∈ 1:L
 		Q[l][1:4^D,:,:,4^D+1:2*4^D] *= c[l+1];
 	end
-  Q[1] = Q[1][1:1,:,:,:] + c[1]*Q[1][4^D+1:4^D+1,:,:,:]
+  Q[1] = Q[1][1:1,:,:,:] .+ c[1]*Q[1][4^D+1:4^D+1,:,:,:]
 	Q[L] = Q[L][:,:,:,4^D+1:4^D+1]
 
   return Q
 end
 
 function ttBPXdnLambdaD2(L::Int64, D::Int64, K::Int64)::TensorMatrix
-	W = eye(2^D, 2^D) / 2^D
+	W = eye(2^D) / 2^D
 	W = reshape(W, (1,2^D,2^D,1))
 
 	S = [2] / 2
@@ -196,7 +198,7 @@ function ttBPXdnLambdaD2(L::Int64, D::Int64, K::Int64)::TensorMatrix
 end
 
 function ttBPXdnLambdaId(L::Int64, D::Int64)::TensorMatrix
-	W = eye(2^D, 2^D) / 2^D
+	W = eye(2^D) / 2^D
 	W = reshape(W, (1,2^D,2^D,1))
 
 	M = [2 0; 0 2/3] / 2
@@ -336,36 +338,36 @@ function ttBPXdnQ(L::Int64, D::Int64, K::Int64)::TensorMatrix
 	end
 
 	prm = collect(1:D)
-	prm = [2*prm; 2*prm-1; 2*D+2*prm-1; 2*D+2*prm]
+	prm = [2*prm; 2*prm .- 1; 2*D .+ 2*prm .- 1; 2*D .+ 2*prm]
 
-	sz = repmat([2, 4], 2*D, 1)
+	sz = repeat([2, 4], 2*D, 1)
   U = reshape(U, sz...)
 	U = permutedims(U, prm)
 	sz = sz[collect(prm)]
-	sz = prod(reshape(sz, (D, 4)), 1)
+	sz = prod(reshape(sz, (D, 4)), dims=1)
 	U = reshape(U, sz...)
 
-	sz = repmat([2, 4], 2*D, 1)
+	sz = repeat([2, 4], 2*D, 1)
 	if K ∈ 1:D
 		sz[2*D+2*K] = 2
 	end
   UT = reshape(UT, sz...)
 	UT = permutedims(UT, prm)
 	sz = sz[collect(prm)]
-	sz = prod(reshape(sz, (D, 4)), 1)
+	sz = prod(reshape(sz, (D, 4)), dims=1)
 	UT = reshape(UT, sz...)
 
-	sz = repmat([2, 4], 2*D, 1)
+	sz = repeat([2, 4], 2*D, 1)
 	if K ∈ 1:D
 		sz[2*D+2*K] = 2
 	end
   TY = reshape(TY, sz...)
 	TY = permutedims(TY, prm)
 	sz = sz[collect(prm)]
-	sz = prod(reshape(sz, (D, 4)), 1)
+	sz = prod(reshape(sz, (D, 4)), dims=1)
 	TY = reshape(TY, sz...)
 
-	sz = repmat([2, 4], 2*D, 1)
+	sz = repeat([2, 4], 2*D, 1)
 	if K ∈ 1:D
 		sz[2*K] = 2
 		sz[2*D+2*K] = 2
@@ -373,10 +375,10 @@ function ttBPXdnQ(L::Int64, D::Int64, K::Int64)::TensorMatrix
   Y = reshape(Y, sz...)
 	Y = permutedims(Y, prm)
 	sz = sz[collect(prm)]
-	sz = prod(reshape(sz, (D, 4)), 1)
+	sz = prod(reshape(sz, (D, 4)), dims=1)
 	Y = reshape(Y, sz...)
 
-	sz = repmat([2, 4], D, 1)
+	sz = repeat([2, 4], D, 1)
 	sz = [sz; ones(Int64, 2*D, 1)]
 	if K ∈ 1:D
 		sz[2*K-1] = 1
@@ -385,14 +387,14 @@ function ttBPXdnQ(L::Int64, D::Int64, K::Int64)::TensorMatrix
   M = reshape(M, sz...)
 	M = permutedims(M, prm)
 	sz = sz[collect(prm)]
-	sz = prod(reshape(sz, (D, 4)), 1)
+	sz = prod(reshape(sz, (D, 4)), dims=1)
 	M = reshape(M, sz...)
 
 	Q = TensorMatrix(L+1)
-	Q[1] = cat(4, U[1:1,:,:,:], c[2]*UT[1:1,:,:,:]+c[1]*TY[1:1,:,:,:]);
+	Q[1] = cat(U[1:1,:,:,:], c[2]*UT[1:1,:,:,:] .+ c[1]*TY[1:1,:,:,:], dims = 4);
 	O = zeros(size(Y, 1), 2^D, 2^D, size(U, 4))
 	for ℓ ∈ 2:L-1
-		Q[ℓ]= cat(4, cat(1, U, O), cat(1, c[ℓ+1]*UT, Y))
+		Q[ℓ]= cat(cat(U, O, dims=1), cat(c[ℓ+1]*UT, Y, dims=1), dims=4)
 	end
 	Q[L] = cat(1, c[L+1]*UT, Y)
 	Q[L+1] = M
@@ -529,36 +531,36 @@ function ttBPXdnQLaplace(L::Int64, D::Int64, K::Int64)::TensorMatrix
 	end
 
 	prm = collect(1:D)
-	prm = [2*prm; 2*prm-1; 2*D+2*prm-1; 2*D+2*prm]
+	prm = [2*prm; 2*prm .- 1; 2*D .+ 2*prm .- 1; 2*D .+ 2*prm]
 
-	sz = repmat([2, 4], 2*D, 1)
+	sz = repeat([2, 4], 2*D, 1)
   U = reshape(U, sz...)
 	U = permutedims(U, prm)
 	sz = sz[collect(prm)]
-	sz = prod(reshape(sz, (D, 4)), 1)
+	sz = prod(reshape(sz, (D, 4)), dims=1)
 	U = reshape(U, sz...)
 
-	sz = repmat([2, 4], 2*D, 1)
+	sz = repeat([2, 4], 2*D, 1)
 	if K ∈ 1:D
 		sz[2*D+2*K] = 2
 	end
   UT = reshape(UT, sz...)
 	UT = permutedims(UT, prm)
 	sz = sz[collect(prm)]
-	sz = prod(reshape(sz, (D, 4)), 1)
+	sz = prod(reshape(sz, (D, 4)), dims=1)
 	UT = reshape(UT, sz...)
 
-	sz = repmat([2, 4], 2*D, 1)
+	sz = repeat([2, 4], 2*D, 1)
 	if K ∈ 1:D
 		sz[2*D+2*K] = 2
 	end
   TY = reshape(TY, sz...)
 	TY = permutedims(TY, prm)
 	sz = sz[collect(prm)]
-	sz = prod(reshape(sz, (D, 4)), 1)
+	sz = prod(reshape(sz, (D, 4)), dims=1)
 	TY = reshape(TY, sz...)
 
-	sz = repmat([2, 4], 2*D, 1)
+	sz = repeat([2, 4], 2*D, 1)
 	if K ∈ 1:D
 		sz[2*K] = 2
 		sz[2*D+2*K] = 2
@@ -566,10 +568,10 @@ function ttBPXdnQLaplace(L::Int64, D::Int64, K::Int64)::TensorMatrix
   Y = reshape(Y, sz...)
 	Y = permutedims(Y, prm)
 	sz = sz[collect(prm)]
-	sz = prod(reshape(sz, (D, 4)), 1)
+	sz = prod(reshape(sz, (D, 4)), dims=1)
 	Y = reshape(Y, sz...)
 
-	sz = repmat([2, 4], D, 1)
+	sz = repeat([2, 4], D, 1)
 	sz = [sz; ones(Int64, 2*D, 1)]
 	if K ∈ 1:D
 		sz[2*K-1] = 1
@@ -578,16 +580,16 @@ function ttBPXdnQLaplace(L::Int64, D::Int64, K::Int64)::TensorMatrix
   M = reshape(M, sz...)
 	M = permutedims(M, prm)
 	sz = sz[collect(prm)]
-	sz = prod(reshape(sz, (D, 4)), 1)
+	sz = prod(reshape(sz, (D, 4)), dims=1)
 	M = reshape(M, sz...)
 
 	Q = TensorMatrix(L+1)
-	Q[1] = cat(4, U[1:1,:,:,:], c[2]*UT[1:1,:,:,:]+c[1]*TY[1:1,:,:,:]);
+	Q[1] = cat(U[1:1,:,:,:], c[2]*UT[1:1,:,:,:]+c[1]*TY[1:1,:,:,:], dims=4);
 	O = zeros(size(Y, 1), 2^D, 2^D, size(U, 4))
 	for ℓ ∈ 2:L-1
-		Q[ℓ]= cat(4, cat(1, U, O), cat(1, c[ℓ+1]*UT, Y))
+		Q[ℓ]= cat(cat(U, O, dims=1), cat(c[ℓ+1]*UT, Y, dims=1), dims=4)
 	end
-	Q[L] = cat(1, c[L+1]*UT, Y)
+	Q[L] = cat(c[L+1]*UT, Y, dims=1)
 	Q[L+1] = M
 
   return Q
