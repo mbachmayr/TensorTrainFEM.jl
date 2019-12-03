@@ -57,10 +57,10 @@ uuid = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
 
 [[MacroTools]]
-deps = ["Compat", "DataStructures", "Test"]
-git-tree-sha1 = "82921f0e3bde6aebb8e524efc20f4042373c0c06"
+deps = ["DataStructures", "Markdown", "Random"]
+git-tree-sha1 = "e2fc7a55bb2224e203bbd8b59f72b91323233458"
 uuid = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
-version = "0.5.2"
+version = "0.5.3"
 
 [[Markdown]]
 deps = ["Base64"]
@@ -126,7 +126,7 @@ uuid = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 
 [[TensorTrains]]
 deps = ["LinearAlgebra", "Logging", "PyCall", "Random", "Test"]
-git-tree-sha1 = "c5207723f368e6af14de0b63009b8d4f13ae6935"
+git-tree-sha1 = "416ade7a76ab2b1f305d32dce77413ec9cd548c3"
 repo-rev = "master"
 repo-url = "https://github.com/mbachmayr/TensorTrains.jl.git"
 uuid = "6a7a8bb0-4806-11e9-323f-e9cf5e27521e"
