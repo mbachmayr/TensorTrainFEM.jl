@@ -49,7 +49,7 @@ function amen2D(L::Integer, ε::AbstractFloat,
     B, g = fullSystem(L, 2)
     u = amen(B, g, g, ε, kickrank, nswp)
     B = 0
-    gc()
+    GC.gc()
 
     C = ttBPXdnC(L, 2)
     Cu = matvec(C, u)

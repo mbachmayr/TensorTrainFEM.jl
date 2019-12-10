@@ -1,6 +1,7 @@
 # Code for 1D example with highly oscillating coefficient,
 # using AMEn solver via Python interface (see TTPy.jl)
 using TensorTrains, TensorTrainFEM
+using TensorTrains.Solvers
 using TensorTrains.TTPy
 
 export amenOscillatory1D
